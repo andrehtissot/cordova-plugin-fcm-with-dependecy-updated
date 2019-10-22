@@ -29,7 +29,8 @@ FCMPlugin.getAPNSToken(
 );
 ```
 
-On android, it will always return `null`.
+On android, it will always return `null`.  
+The APNS token [shouldn't refresh once created](https://stackoverflow.com/questions/6652242/does-the-apns-device-token-ever-change-once-created). So, warning don't override it when `onTokenRefresh()` is fired. 
 
 ### Version 3.2.0 (16/09/2019)
 #### Checking for permissions
