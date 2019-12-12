@@ -1,6 +1,6 @@
 {
   "version": "4.1.1",
-  "name": "cordova-plugin-fcm-with-dependecy-updated",
+  "name": "cordova-plugin-fcm-notification",
   "cordova_name": "Cordova FCM Push Plugin",
   "description": "Google Firebase Cloud Messaging Cordova Push Plugin fork with dependecy updated",
   "license": "MIT",
@@ -8,10 +8,10 @@
   "typings": "src/FCMPlugin.d.ts",
   "repo": "",
   "issue": "",
-  "author": "André Augusto Tissot",
+  "author": "Rusu Madalina",
   "repository": {
     "type": "git",
-    "url": "https://github.com/andrehtissot/cordova-plugin-fcm-with-dependecy-updated"
+    "url": "https://github.com/rusumadalina/cordova-plugin-fcm-notification"
   },
   "keywords": [
     "ecosystem:cordova",

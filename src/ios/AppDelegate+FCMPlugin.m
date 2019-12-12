@@ -3,13 +3,13 @@
 #import <objc/runtime.h>
 #import <Foundation/Foundation.h>
 #import "Firebase.h"
-
+ 
 #if defined(__IPHONE_10_0) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_10_0
 @import UserNotifications;
 #endif
-
+ 
 @import Firebase;
-
+ 
 // Implement UNUserNotificationCenterDelegate to receive display notification via APNS for devices
 // running iOS 10 and above. Implement FIRMessagingDelegate to receive data message via FCM for
 // devices running iOS 10 and above.
@@ -17,19 +17,19 @@
 @interface AppDelegate () <UNUserNotificationCenterDelegate, FIRMessagingDelegate>
 @end
 #endif
-
+ 
 // Copied from Apple's header in case it is missing in some cases (e.g. pre-Xcode 8 builds).
 #ifndef NSFoundationVersionNumber_iOS_9_x_Max
 #define NSFoundationVersionNumber_iOS_9_x_Max 1299
 #endif
-
+ 
 @implementation AppDelegate (MCPlugin)
-
+ 
 static NSData *lastPush;
 static NSString *fcmToken;
 static NSString *apnsToken;
 NSString *const kGCMMessageIDKey = @"gcm.message_id";
-
+ 
 //Method swizzling
 + (void)load
 {
@@ -37,7 +37,7 @@ NSString *const kGCMMessageIDKey = @"gcm.message_id";
     Method custom =    class_getInstanceMethod(self, @selector(application:customDidFinishLaunchingWithOptions:));
     method_exchangeImplementations(original, custom);
 }
-
+ 
 - (BOOL)application:(UIApplication *)application customDidFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
     
     [self application:application customDidFinishLaunchingWithOptions:launchOptions];
@@ -83,14 +83,14 @@ NSString *const kGCMMessageIDKey = @"gcm.message_id";
     // [END register_for_notifications]
     return YES;
 }
-
+ 
 // [START message_handling]
 // Receive displayed notifications for iOS 10 devices.
-
+ 
 // Note on the pragma: When compiling with iOS 10 SDK, include methods that
 //                     handle notifications using notification center.
 #if defined(__IPHONE_10_0) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_10_0
-
+ 
 // Handle incoming notification messages while app is in the foreground.
 - (void)userNotificationCenter:(UNUserNotificationCenter *)center
        willPresentNotification:(UNNotification *)notification
@@ -114,7 +114,7 @@ NSString *const kGCMMessageIDKey = @"gcm.message_id";
     // Change this to your preferred presentation option
     completionHandler(UNNotificationPresentationOptionNone);
 }
-
+ 
 // Handle notification messages after display notification is tapped by the user.
 - (void)userNotificationCenter:(UNUserNotificationCenter *)center
 didReceiveNotificationResponse:(UNNotificationResponse *)response
@@ -140,40 +140,72 @@ didReceiveNotificationResponse:(UNNotificationResponse *)response
     completionHandler();
 }
 #endif
-
-// [START receive_message in background iOS < 10]
-
-// Include the iOS < 10 methods for handling notifications for when running on iOS < 10.
-// As in, even if you compile with iOS 10 SDK, when running on iOS 9 the only way to get
-// notifications is the didReceiveRemoteNotification.
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-implementations"
+ 
+ 
+ 
+ 
+ 
+ 
+// [START receive_message]
+- (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo {
+  // If you are receiving a notification message while your app is in the background,
+  // this callback will not be fired till the user taps on the notification launching the application.
+  // TODO: Handle data of notification
+ 
+  // With swizzling disabled you must let Messaging know about the message, for Analytics
+  // [[FIRMessaging messaging] appDidReceiveMessage:userInfo];
+ 
+  // Print message ID.
+  if (userInfo[kGCMMessageIDKey]) {
+    NSLog(@"Message ID: %@", userInfo[kGCMMessageIDKey]);
+  }
+ 
+  // Print full message.
+  NSLog(@"%@", userInfo);
+}
+ 
 - (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo
-{
-    // Short-circuit when actually running iOS 10+, let notification centre methods handle the notification.
-    if (NSFoundationVersionNumber >= NSFoundationVersionNumber_iOS_9_x_Max) {
-        return;
-    }
-    
-    NSLog(@"Message ID: %@", userInfo[@"gcm.message_id"]);
+    fetchCompletionHandler:(void (^)(UIBackgroundFetchResult))completionHandler {
+  // If you are receiving a notification message while your app is in the background,
+  // this callback will not be fired till the user taps on the notification launching the application.
+  // TODO: Handle data of notification
+ 
+  // With swizzling disabled you must let Messaging know about the message, for Analytics
+  // [[FIRMessaging messaging] appDidReceiveMessage:userInfo];
+ 
+  // Print message ID.
+  if (userInfo[kGCMMessageIDKey]) {
+    NSLog(@"Message ID: %@", userInfo[kGCMMessageIDKey]);
+  }
+ 
+  // Print full message.
+  NSLog(@"%@", userInfo);
     
     NSError *error;
     NSDictionary *userInfoMutable = [userInfo mutableCopy];
+ 
+    NSData *jsonData = [NSJSONSerialization dataWithJSONObject:userInfoMutable
+                                                       options:0
+                                                         error:&error];
+    [FCMPlugin.fcmPlugin notifyOfMessage:jsonData];
     
-    if (application.applicationState != UIApplicationStateActive) {
-        NSLog(@"New method with push callback: %@", userInfo);
-        
-        [userInfoMutable setValue:@(YES) forKey:@"wasTapped"];
-        NSData *jsonData = [NSJSONSerialization dataWithJSONObject:userInfoMutable options:0 error:&error];
-        NSLog(@"APP WAS CLOSED DURING PUSH RECEPTION Saved data: %@", jsonData);
-        lastPush = jsonData;
-    }
+  completionHandler(UIBackgroundFetchResultNewData);
 }
-#pragma clang diagnostic pop
-// [END receive_message in background] iOS < 10]
-
-
+// [END receive_message]
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+// [START receive_message in background iOS < 10]
+ 
+// Include the iOS < 10 methods for handling notifications for when running on iOS < 10.
+// As in, even if you compile with iOS 10 SDK, when running on iOS 9 the only way to get
+// notifications is the didReceiveRemoteNotification.
+ 
+ 
 - (void)application:(UIApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceTokenData {
 #if __IPHONE_OS_VERSION_MAX_ALLOWED >= 130000
     NSString *deviceToken = [self hexadecimalStringFromData:deviceTokenData];
@@ -187,51 +219,7 @@ didReceiveNotificationResponse:(UNNotificationResponse *)response
     [FCMPlugin setInitialAPNSToken:deviceToken];
     NSLog(@"Device APNS Token: %@", deviceToken);
 }
-
-// [START receive_message iOS < 10]
-- (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo
-fetchCompletionHandler:(void (^)(UIBackgroundFetchResult))completionHandler
-{
-    // Short-circuit when actually running iOS 10+, let notification centre methods handle the notification.
-    if (NSFoundationVersionNumber >= NSFoundationVersionNumber_iOS_9_x_Max) {
-        return;
-    }
-    
-    // If you are receiving a notification message while your app is in the background,
-    // this callback will not be fired till the user taps on the notification launching the application.
-    // TODO: Handle data of notification
-    
-    // Print message ID.
-    NSLog(@"Message ID: %@", userInfo[@"gcm.message_id"]);
-    
-    // Pring full message.
-    NSLog(@"%@", userInfo);
-    NSError *error;
-    
-    NSDictionary *userInfoMutable = [userInfo mutableCopy];
-    
-    // Has user tapped the notificaiton?
-    // UIApplicationStateActive   - app is currently active
-    // UIApplicationStateInactive - app is transitioning from background to
-    //                              foreground (user taps notification)
-    
-    if (application.applicationState == UIApplicationStateActive
-        || application.applicationState == UIApplicationStateInactive) {
-        [userInfoMutable setValue:@(NO) forKey:@"wasTapped"];
-        NSLog(@"app active");
-        NSData *jsonData = [NSJSONSerialization dataWithJSONObject:userInfoMutable
-                                                           options:0
-                                                             error:&error];
-        [FCMPlugin.fcmPlugin notifyOfMessage:jsonData];
-        
-        // app is in background
-    }
-    
-    completionHandler(UIBackgroundFetchResultNoData);
-}
-// [END receive_message iOS < 10]
-// [END message_handling]
-
+ 
 - (void)messaging:(FIRMessaging *)messaging didReceiveRegistrationToken:(NSString *)deviceToken {
     NSLog(@"Device FCM Token: %@", deviceToken);
     // Notify about received token.
@@ -242,7 +230,7 @@ fetchCompletionHandler:(void (^)(UIBackgroundFetchResult))completionHandler
     [FCMPlugin.fcmPlugin notifyFCMTokenRefresh:deviceToken];
     [self connectToFcm];
 }
-
+ 
 // [START connect_to_fcm]
 - (void)connectToFcm
 {
@@ -259,14 +247,14 @@ fetchCompletionHandler:(void (^)(UIBackgroundFetchResult))completionHandler
     [[FIRMessaging messaging] subscribeToTopic:@"all"];
 }
 // [END connect_to_fcm]
-
+ 
 - (void)applicationDidBecomeActive:(UIApplication *)application
 {
     NSLog(@"app become active");
     [FCMPlugin.fcmPlugin appEnterForeground];
     [self connectToFcm];
 }
-
+ 
 // [START disconnect_from_fcm]
 - (void)applicationDidEnterBackground:(UIApplication *)application
 {
@@ -276,21 +264,21 @@ fetchCompletionHandler:(void (^)(UIBackgroundFetchResult))completionHandler
     NSLog(@"Disconnected from FCM");
 }
 // [END disconnect_from_fcm]
-
+ 
 +(NSData*)getLastPush
 {
     NSData* returnValue = lastPush;
     lastPush = nil;
     return returnValue;
 }
-
+ 
 - (NSString *)hexadecimalStringFromData:(NSData *)data
 {
     NSUInteger dataLength = data.length;
     if (dataLength == 0) {
         return nil;
     }
-
+ 
     const unsigned char *dataBuffer = data.bytes;
     NSMutableString *hexString  = [NSMutableString stringWithCapacity:(dataLength * 2)];
     for (int i = 0; i < dataLength; ++i) {
@@ -298,6 +286,6 @@ fetchCompletionHandler:(void (^)(UIBackgroundFetchResult))completionHandler
     }
     return [hexString copy];
 }
-
-
+ 
+ 
 @end
