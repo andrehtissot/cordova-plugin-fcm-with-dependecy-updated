@@ -80,7 +80,6 @@
 
 	<!-- IOS CONFIGURATION -->
 	<platform name="ios">
-		<preference name="IOS_FIREBASE_MESSAGING_VERSION" default="~> 7.4.0" />
 		<config-file target="config.xml" parent="/*">
 			<feature name="FCMPlugin">
 				<param name="ios-package" value="FCMPlugin"/>
@@ -123,7 +122,7 @@
                 <source url="https://github.com/CocoaPods/Specs.git"/>
 			</config>
 			<pods>
-				<pod name="Firebase/Messaging" spec="$IOS_FIREBASE_MESSAGING_VERSION"/>
+				<pod name="Firebase/Messaging" spec="~> 7.4.0"/>
 			</pods>
 		</podspec>
 	</platform>
