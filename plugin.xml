@@ -120,10 +120,10 @@
 		<!-- FIREBASE COCOAPODS-->
 		<podspec>
 			<config>
-                <source url="https://github.com/CocoaPods/Specs.git"/>
+                <source url="https://cdn.cocoapods.org/"/>
 			</config>
 			<pods>
-				<pod name="Firebase/Messaging" spec="$IOS_FIREBASE_MESSAGING_VERSION"/>
+				<pod name="Firebase/Messaging"/>
 			</pods>
 		</podspec>
 	</platform>
