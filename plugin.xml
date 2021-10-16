@@ -123,6 +123,7 @@
                 <source url="https://github.com/CocoaPods/Specs.git"/>
 			</config>
 			<pods>
+				<pod name="GoogleUtilities/UserDefaults" spec="~> 7.2.2"/>
 				<pod name="Firebase/Messaging" spec="$IOS_FIREBASE_MESSAGING_VERSION"/>
 			</pods>
 		</podspec>
