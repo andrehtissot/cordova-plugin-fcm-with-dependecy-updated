@@ -2,7 +2,7 @@
 
 ## Version 7
 
-### Version 7.8.0 (03/02/2020)
+### Version 7.8.0 (03/02/2021)
 
 - IOS_FIREBASE_MESSAGING_VERSION upgraded to 7.4.0;
 - FCM.hasPermission now supports Android;
