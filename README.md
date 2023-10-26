@@ -9,8 +9,8 @@
 [![npm version](https://img.shields.io/npm/v/cordova-plugin-fcm-with-dependecy-updated.svg)](https://www.npmjs.com/package/cordova-plugin-fcm-with-dependecy-updated)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![GitHub issues](https://img.shields.io/github/issues/andrehtissot/cordova-plugin-fcm-with-dependecy-updated.svg)](https://github.com/andrehtissot/cordova-plugin-fcm-with-dependecy-updated/issues)
-[![GitHub forks](https://img.shields.io/github/forks/andrehtissot/cordova-plugin-fcm-with-dependecy-updated.svg)](https://github.com/andrehtissot/cordova-plugin-fcm-with-dependecy-updated/network)
-[![GitHub stars](https://img.shields.io/github/stars/andrehtissot/cordova-plugin-fcm-with-dependecy-updated.svg)](https://github.com/andrehtissot/cordova-plugin-fcm-with-dependecy-updated/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/andrehtissot/cordova-plugin-fcm-with-dependecy-updated.svg)](https://github.com/marutifh/cordova-plugin-fcm-with-dependecy-updated/network)
+[![GitHub stars](https://img.shields.io/github/stars/andrehtissot/cordova-plugin-fcm-with-dependecy-updated.svg)](https://github.com/marutifh/cordova-plugin-fcm-with-dependecy-updated/stargazers)
 [![Known Vulnerabilities](https://snyk.io/test/github/andrehtissot/cordova-plugin-fcm-with-dependecy-updated/badge.svg?targetFile=package.json)](https://snyk.io/test/github/andrehtissot/cordova-plugin-fcm-with-dependecy-updated?targetFile=package.json)
 [![DeepScan grade](https://deepscan.io/api/teams/3417/projects/5068/branches/39495/badge/grade.svg)](https://deepscan.io/dashboard#view=project&tid=3417&pid=5068&bid=39495)
 
@@ -50,8 +50,8 @@ Make sure you have ‘google-services.json’ for Android and/or ‘GoogleServic
 |Preference|Default Value|Description|
 |---|---|---|
 |ANDROID_DEFAULT_NOTIFICATION_ICON|@mipmap/ic_launcher|Default notification icon.|
-|ANDROID_FCM_VERSION|21.0.0|Native Firebase Message SDK version.<br>:warning: Replaced by BoM versioning on Gradle >= 3.4.|
-|ANDROID_FIREBASE_BOM_VERSION|26.0.0|[Firebase BoM](https://firebase.google.com/docs/android/learn-more#bom) version.|
+|ANDROID_FCM_VERSION|23.0.0|Native Firebase Message SDK version.<br>:warning: Replaced by BoM versioning on Gradle >= 3.4.|
+|ANDROID_FIREBASE_BOM_VERSION|29.0.1|[Firebase BoM](https://firebase.google.com/docs/android/learn-more#bom) version.|
 |ANDROID_GOOGLE_SERVICES_VERSION|4.3.4|Native Google Services SDK version.|
 |ANDROID_GRADLE_TOOLS_VERSION|4.1.0|Gradle tools version.|
 |IOS_FIREBASE_MESSAGING_VERSION|~> 7.4.0|Native Firebase Message SDK version|

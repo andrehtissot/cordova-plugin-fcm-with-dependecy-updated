@@ -24,32 +24,22 @@ public class FCMPluginActivity extends Activity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Log.d(TAG, "==> FCMPluginActivity onCreate");
-        this.sendPushPayload();
+        handleNotification(this, getIntent());
         finish();
-        forceMainActivityReload();
     }
 
-    private void sendPushPayload() {
-        Bundle intentExtras = getIntent().getExtras();
-        if(intentExtras == null) {
-            return;
-        }
-        Log.d(TAG, "==> USER TAPPED NOTIFICATION");
-        Map<String, Object> data = new HashMap<String, Object>();
-        data.put("wasTapped", true);
-        for (String key : intentExtras.keySet()) {
-            Object value = intentExtras.get(key);
-            Log.d(TAG, "\tKey: " + key + " Value: " + value);
-            data.put(key, value);
-        }
-        FCMPlugin.setInitialPushPayload(data);
-        FCMPlugin.sendPushPayload(data);
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        Log.d(TAG, "==> FCMPluginActivity onNewIntent");
+        handleNotification(this, intent);
+        finish();
     }
 
-    private void forceMainActivityReload() {
-        PackageManager pm = getPackageManager();
-        Intent launchIntent = pm.getLaunchIntentForPackage(getApplicationContext().getPackageName());
-        startActivity(launchIntent);
+    @Override
+    public void onStart() {
+        super.onStart();
+        Log.d(TAG, "==> FCMPluginActivity onStart");
     }
 
     @Override
@@ -61,15 +51,37 @@ public class FCMPluginActivity extends Activity {
     }
 
     @Override
-    public void onStart() {
-        super.onStart();
-        Log.d(TAG, "==> FCMPluginActivity onStart");
-    }
-
-    @Override
     public void onStop() {
         super.onStop();
         Log.d(TAG, "==> FCMPluginActivity onStop");
     }
 
+    private static void handleNotification(Context context, Intent intent) {
+        try {
+            PackageManager packageManager = context.getPackageManager();
+
+            Intent launchIntent = packageManager.getLaunchIntentForPackage(context.getPackageName());
+            launchIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+
+            Bundle intentExtras = intent.getExtras();
+            if (intentExtras == null) {
+                return;
+            }
+            Log.d(TAG, "==> USER TAPPED NOTIFICATION " + intentExtras.toString());
+            Map<String, Object> data = new HashMap<String, Object>();
+            data.put("wasTapped", true);
+            for (String key : intentExtras.keySet()) {
+                Object value = intentExtras.get(key);
+                Log.d(TAG, "\tKey: " + key + " Value: " + value);
+                data.put(key, value);
+            }
+            FCMPlugin.setInitialPushPayload(data);
+            FCMPlugin.sendPushPayload(data);
+
+            launchIntent.putExtras(intentExtras);
+            context.startActivity(launchIntent);
+        } catch (Exception e) {
+            Log.e(TAG, "handleNotification error " + e.getMessage());
+        }
+    }
 }

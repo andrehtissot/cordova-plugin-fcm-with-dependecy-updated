@@ -3,14 +3,14 @@ package com.gae.scaffolder.plugin;
 import androidx.core.app.NotificationManagerCompat;
 import android.app.NotificationManager;
 import android.content.Context;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.util.Log;
 
 import com.gae.scaffolder.plugin.interfaces.*;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.Task;
-import com.google.firebase.iid.FirebaseInstanceId;
-import com.google.firebase.iid.InstanceIdResult;
 import com.google.firebase.messaging.FirebaseMessaging;
 
 import org.apache.cordova.CallbackContext;
@@ -32,6 +32,10 @@ public class FCMPlugin extends CordovaPlugin {
     private static FCMPlugin instance;
     protected Context context;
     protected static CallbackContext jsEventBridgeCallbackContext;
+    protected static final String POST_NOTIFICATIONS = "POST_NOTIFICATIONS";
+    protected static final int POST_NOTIFICATIONS_PERMISSION_REQUEST_ID = 1;
+
+    private static CallbackContext postNotificationPermissionRequestCallbackContext;
 
     public FCMPlugin() {}
     public FCMPlugin(Context context) {
@@ -140,6 +144,8 @@ public class FCMPlugin extends CordovaPlugin {
                 this.deleteInstanceId(callbackContext);
             } else if (action.equals("hasPermission")) {
                 this.hasPermission(callbackContext);
+            } else if (action.equals("requestPushPermission")) {
+                this.grantPermission(callbackContext);
             } else {
                 callbackContext.error("Method not found");
                 return false;
@@ -179,9 +185,9 @@ public class FCMPlugin extends CordovaPlugin {
 
     public void getToken(final TokenListeners<String, JSONObject> callback) {
         try {
-            FirebaseInstanceId.getInstance().getInstanceId().addOnCompleteListener(new OnCompleteListener<InstanceIdResult>() {
+            FirebaseMessaging.getInstance().getToken().addOnCompleteListener(new OnCompleteListener<String>() {
                 @Override
-                public void onComplete(Task<InstanceIdResult> task) {
+                public void onComplete(Task<String> task) {
                     if (!task.isSuccessful()) {
                         Log.w(TAG, "getInstanceId failed", task.getException());
                         try {
@@ -194,14 +200,14 @@ public class FCMPlugin extends CordovaPlugin {
                     }
 
                     // Get new Instance ID token
-                    String newToken = task.getResult().getToken();
+                    String newToken = task.getResult();
 
                     Log.i(TAG, "\tToken: " + newToken);
                     callback.success(newToken);
                 }
             });
 
-            FirebaseInstanceId.getInstance().getInstanceId().addOnFailureListener(new OnFailureListener() {
+            FirebaseMessaging.getInstance().getToken().addOnFailureListener(new OnFailureListener() {
                 @Override
                 public void onFailure(final Exception e) {
                     try {
@@ -224,7 +230,7 @@ public class FCMPlugin extends CordovaPlugin {
         cordova.getThreadPool().execute(new Runnable() {
             public void run() {
                 try {
-                    FirebaseInstanceId.getInstance().deleteInstanceId();
+                    FirebaseMessaging.getInstance().deleteToken();
                     callbackContext.success();
                 } catch (Exception e) {
                     callbackContext.error(e.getMessage());
@@ -238,13 +244,129 @@ public class FCMPlugin extends CordovaPlugin {
             public void run() {
                 try {
                     NotificationManagerCompat notificationManagerCompat =
-                        NotificationManagerCompat.from(cordova.getActivity().getApplicationContext());
-                    callbackContext.success(notificationManagerCompat.areNotificationsEnabled() ? 1 : 0);
+                            NotificationManagerCompat.from(cordova.getActivity().getApplicationContext());
+
+                    boolean areNotificationsEnabled = notificationManagerCompat.areNotificationsEnabled();
+
+                    boolean hasRuntimePermission;
+
+                    if (Build.VERSION.SDK_INT >= 33) { // Android 13+
+                        hasRuntimePermission = hasRuntimePermission(POST_NOTIFICATIONS);
+                    } else {
+                        hasRuntimePermission = true;
+                    }
+
+                    callbackContext.success(areNotificationsEnabled && hasRuntimePermission ? 1 : 0);
                 } catch (Exception e) {
                     callbackContext.error(e.getMessage());
                 }
             }
         });
+    }
+
+    private void grantPermission(final CallbackContext callbackContext) {
+        CordovaPlugin plugin = this;
+        cordova.getThreadPool().execute(new Runnable() {
+            public void run() {
+                try {
+                    if (Build.VERSION.SDK_INT >= 33) { // Android 13+
+                        boolean hasRuntimePermission = hasRuntimePermission(POST_NOTIFICATIONS);
+                        if (hasRuntimePermission) {
+                            callbackContext.success(1);
+                        }
+                        else {
+                            String[] permissions = new String[]{qualifyPermission(POST_NOTIFICATIONS)};
+                            postNotificationPermissionRequestCallbackContext = callbackContext;
+                            requestPermissions(plugin, POST_NOTIFICATIONS_PERMISSION_REQUEST_ID, permissions);
+                            sendEmptyPluginResultAndKeepCallback(callbackContext);
+                        }
+                    } else {
+                        callbackContext.success(1);
+                    }
+
+                } catch (Exception e) {
+                    callbackContext.error(e.getMessage());
+                }
+            }
+        });
+    }
+
+    protected void sendEmptyPluginResultAndKeepCallback(CallbackContext callbackContext) {
+        PluginResult pluginresult = new PluginResult(PluginResult.Status.NO_RESULT);
+        pluginresult.setKeepCallback(true);
+        callbackContext.sendPluginResult(pluginresult);
+    }
+
+    protected String qualifyPermission(String permission) {
+        if (permission.startsWith("android.permission.")) {
+            return permission;
+        } else {
+            return "android.permission." + permission;
+        }
+    }
+
+    protected boolean hasRuntimePermission(String permission) throws Exception {
+        boolean hasRuntimePermission = true;
+        String qualifiedPermission = qualifyPermission(permission);
+        java.lang.reflect.Method method = null;
+        try {
+            method = cordova.getClass().getMethod("hasPermission", qualifiedPermission.getClass());
+            Boolean bool = (Boolean) method.invoke(cordova, qualifiedPermission);
+            hasRuntimePermission = bool.booleanValue();
+        } catch (NoSuchMethodException e) {
+            Log.w(TAG, "Cordova v" + CordovaWebView.CORDOVA_VERSION + " does not support runtime permissions so defaulting to GRANTED for " + permission);
+        }
+        return hasRuntimePermission;
+    }
+
+    protected void requestPermissions(CordovaPlugin plugin, int requestCode, String[] permissions) throws Exception {
+        try {
+            java.lang.reflect.Method method = cordova.getClass().getMethod("requestPermissions", org.apache.cordova.CordovaPlugin.class, int.class, java.lang.String[].class);
+            method.invoke(cordova, plugin, requestCode, permissions);
+        } catch (NoSuchMethodException e) {
+            throw new Exception("requestPermissions() method not found in CordovaInterface implementation of Cordova v" + CordovaWebView.CORDOVA_VERSION);
+        }
+    }
+
+    /************
+     * Overrides
+     ***********/
+
+    /**
+     * then updates the list of status based on the grantResults before passing the result back via the context.
+     *
+     * @param requestCode  - ID that was used when requesting permissions
+     * @param permissions  - list of permissions that were requested
+     * @param grantResults - list of flags indicating if above permissions were granted or denied
+     */
+    public void onRequestPermissionResult(int requestCode, String[] permissions, int[] grantResults) throws JSONException {
+        String sRequestId = String.valueOf(requestCode);
+        Log.v(TAG, "Received result for permissions request id=" + sRequestId);
+        try {
+            if (postNotificationPermissionRequestCallbackContext == null) {
+                Log.e(TAG, "No callback context found for permissions request id=" + sRequestId);
+                return;
+            }
+
+            boolean postNotificationPermissionGranted = false;
+            for (int i = 0, len = permissions.length; i < len; i++) {
+                String androidPermission = permissions[i];
+
+                if (androidPermission.equals(qualifyPermission(POST_NOTIFICATIONS))) {
+                    postNotificationPermissionGranted = grantResults[i] == PackageManager.PERMISSION_GRANTED;
+                }
+            }
+
+            postNotificationPermissionRequestCallbackContext.success(postNotificationPermissionGranted ? 1 : 0);
+            postNotificationPermissionRequestCallbackContext = null;
+
+        } catch (Exception e) {
+            if (postNotificationPermissionRequestCallbackContext != null) {
+                postNotificationPermissionRequestCallbackContext.error(e.getMessage());
+            } else {
+                Log.e(TAG, "onRequestPermissionResult error " + e.getMessage());
+            }
+        }
     }
 
     private JSONObject exceptionToJson(final Exception exception) throws JSONException {
