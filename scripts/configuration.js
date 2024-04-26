@@ -1,14 +1,22 @@
 'use strict';
 
-var helpers = require('./helpers');
+const helpers = require('./helpers');
+const configPreferences = require('./get_config_preferences').getPreferences();
 
-var APP_NAME = helpers.getValueFromXml(
+let APP_NAME = helpers.getValueFromXml(
     'config.xml',
     'name',
     'app name was not found on config.xml'
 );
-var IOS_DIR = 'platforms/ios';
-var ANDROID_DIR = 'platforms/android';
+
+console.log("###### DETECTED PREFERENCES: " + JSON.stringify(configPreferences) + " ######")
+
+const ENV = configPreferences.common.env;
+
+console.log("###### USING ENV PROPERTY: " + ENV + " ######");
+
+let IOS_DIR = 'platforms/ios';
+let ANDROID_DIR = 'platforms/android';
 
 exports.PLATFORM = {
     IOS: {
@@ -35,7 +43,11 @@ exports.PLATFORM = {
             ANDROID_DIR + '/google-services.json',
             ANDROID_DIR + '/assets/www/google-services.json',
             'www/google-services.json',
-            'google-services.json'
+            'google-services.json',
+            ANDROID_DIR + '/' + ENV + '-google-services.json',
+            ANDROID_DIR + '/assets/www/' + ENV + '-google-services.json',
+            'www/' + ENV + '-google-services.json',
+            ENV + '-google-services.json'
         ],
         stringsXmls: [
             ANDROID_DIR + '/app/build/generated/res/google-services/debug/values/values.xml'

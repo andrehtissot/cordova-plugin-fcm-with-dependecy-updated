@@ -1,23 +1,14 @@
 package com.gae.scaffolder.plugin;
 
-import androidx.core.app.NotificationManagerCompat;
 import android.app.NotificationManager;
 import android.content.Context;
+import android.text.TextUtils;
 import android.util.Log;
-
-import com.gae.scaffolder.plugin.interfaces.*;
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.Task;
-import com.google.firebase.iid.FirebaseInstanceId;
-import com.google.firebase.iid.InstanceIdResult;
+import androidx.core.app.NotificationManagerCompat;
+import com.gae.scaffolder.plugin.interfaces.TokenListeners;
+import com.google.firebase.installations.FirebaseInstallations;
 import com.google.firebase.messaging.FirebaseMessaging;
-
-import org.apache.cordova.CallbackContext;
-import org.apache.cordova.CordovaInterface;
-import org.apache.cordova.CordovaPlugin;
-import org.apache.cordova.CordovaWebView;
-import org.apache.cordova.PluginResult;
+import org.apache.cordova.*;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -179,44 +170,36 @@ public class FCMPlugin extends CordovaPlugin {
 
     public void getToken(final TokenListeners<String, JSONObject> callback) {
         try {
-            FirebaseInstanceId.getInstance().getInstanceId().addOnCompleteListener(new OnCompleteListener<InstanceIdResult>() {
-                @Override
-                public void onComplete(Task<InstanceIdResult> task) {
-                    if (!task.isSuccessful()) {
-                        Log.w(TAG, "getInstanceId failed", task.getException());
-                        try {
-                            callback.error(exceptionToJson(task.getException()));
-                        }
-                        catch (JSONException jsonErr) {
-                            Log.e(TAG, "Error when parsing json", jsonErr);
-                        }
-                        return;
-                    }
-
-                    // Get new Instance ID token
-                    String newToken = task.getResult().getToken();
-
-                    Log.i(TAG, "\tToken: " + newToken);
-                    callback.success(newToken);
+            FirebaseMessaging.getInstance().getToken().addOnSuccessListener(token -> {
+                if (!TextUtils.isEmpty(token)) {
+                    Log.d(TAG, "retrieve token successful : " + token);
+                callback.success(token);
+                } else{
+                    Log.w(TAG, "token should not be null...");
                 }
-            });
-
-            FirebaseInstanceId.getInstance().getInstanceId().addOnFailureListener(new OnFailureListener() {
-                @Override
-                public void onFailure(final Exception e) {
-                    try {
-                        Log.e(TAG, "Error retrieving token: ", e);
-                        callback.error(exceptionToJson(e));
-                    } catch (JSONException jsonErr) {
-                        Log.e(TAG, "Error when parsing json", jsonErr);
-                    }
-                }
+            }).addOnFailureListener(e -> {
+              try {
+                callback.error(exceptionToJson(e));
+              } catch (JSONException jsonException) {
+                jsonException.printStackTrace();
+              }
+            }).addOnCanceledListener(() -> {
+              try {
+                callback.error(new JSONObject().put("message", "Gettoken cancelled"));
+              } catch (JSONException e) {
+                e.printStackTrace();
+              }
+            }).addOnCompleteListener(task ->{
+              Log.v(TAG, "getToken : " + task.getResult());
+                callback.success(task.getResult());
             });
         } catch (Exception e) {
             Log.w(TAG, "\tError retrieving token", e);
             try {
                 callback.error(exceptionToJson(e));
-            } catch(JSONException je) {}
+            } catch(JSONException je) {
+              e.printStackTrace();
+            }
         }
     }
 
@@ -224,7 +207,7 @@ public class FCMPlugin extends CordovaPlugin {
         cordova.getThreadPool().execute(new Runnable() {
             public void run() {
                 try {
-                    FirebaseInstanceId.getInstance().deleteInstanceId();
+                    FirebaseInstallations.getInstance().delete();
                     callbackContext.success();
                 } catch (Exception e) {
                     callbackContext.error(e.getMessage());

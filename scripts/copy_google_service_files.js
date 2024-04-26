@@ -5,9 +5,11 @@ var fs = require('fs');
 var helpers = require('./helpers');
 var configurations = require(`./configuration`);
 
+
 var PLATFORM = configurations.PLATFORM;
 
 function copyGoogleServiceFile(platform) {
+    console.log("###### FINDING GOOGLE-SERVICES FILE ######");
     var googleServiceContent = helpers.getGoogleServiceContent(platform);
     if (!googleServiceContent) {
         return;
@@ -42,7 +44,4 @@ function ensureDirExistance(dirPath) {
 
 if (helpers.directoryExists(PLATFORM.ANDROID.dir)) {
     copyGoogleServiceFile(PLATFORM.ANDROID);
-}
-if (helpers.directoryExists(PLATFORM.IOS.dir)) {
-    copyGoogleServiceFile(PLATFORM.IOS);
 }
