@@ -16,7 +16,7 @@ declare var window: {
  * @description
  * Easy plug&play push notification for Google Firebase FCM.
  *
- * @interfaces
+ * @interfacesrequestPushPermission
  * INotificationPayload
  * IChannelConfiguration
  * IRequestPushPermissionOptions
@@ -160,15 +160,46 @@ export class FCMPlugin {
      * @param {IRequestPushPermissionOptions} options Options for push request
      * @returns {Promise<boolean>} Returns a Promise that resolves with the permission status
      */
-    public requestPushPermission(options?: IRequestPushPermissionOptions): Promise<boolean> {
-        if (window.cordova.platformId !== 'ios') {
-            return Promise.resolve(true)
+ public requestPushPermission(options?: IRequestPushPermissionOptions): Promise<boolean> {
+    if (window.cordova.platformId === 'ios') {
+        const ios9SupportTimeout = options?.ios9Support?.timeout ?? 10;
+        const ios9SupportInterval = options?.ios9Support?.interval ?? 0.3;
+        return execAsPromise('requestPushPermission', [ios9SupportTimeout, ios9SupportInterval]);
+    } else if (window.cordova.platformId === 'android') {
+        if (device.version >= 13) {
+            return new Promise((resolve, reject) => {
+                // Ensure Cordova is ready
+                document.addEventListener('deviceready', () => {
+                    const permission = 'android.permission.POST_NOTIFICATIONS';
+                    cordova.plugins.permissions.hasPermission(permission, (status) => {
+                        if (status.hasPermission) {
+                            resolve(true);
+                        } else {
+                            cordova.plugins.permissions.requestPermission(permission, (status) => {
+                                if (status.hasPermission) {
+                                    resolve(true);
+                                } else {
+                                    reject('Permission denied');
+                                }
+                            }, (error) => {
+                                reject('Permission request failed: ' + error);
+                            });
+                        }
+                    }, (error) => {
+                        reject('Permission check failed: ' + error);
+                    });
+                });
+            });
+        } else {
+            return Promise.resolve(true);
         }
-        const ios9SupportTimeout = options?.ios9Support?.timeout ?? 10
-        const ios9SupportInterval = options?.ios9Support?.interval ?? 0.3
-
-        return execAsPromise('requestPushPermission', [ios9SupportTimeout, ios9SupportInterval])
+    } else {
+        return Promise.resolve(true);
     }
+}
+
+
+    
 
     /**
      * Subscribes you to a [topic](https://firebase.google.com/docs/notifications/android/console-topics)
